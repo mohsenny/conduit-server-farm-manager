@@ -1,0 +1,25 @@
+{
+  "ssh_port": 22,
+  "user": "root",
+  "auth_method": "password",
+  "ssh_key_path": "YOUR_SSH_KEY_PATH",
+  "max_clients": 1000,
+  "bandwidth": -1,
+  "metrics_port": 9090,
+  "geo_enabled": true,
+  "geo_port": 9101,
+  "geo_interval_sec": 15,
+  "geo_window_sec": 300,
+  "geo_ports": [],
+  "remote_dir": "/opt/conduit",
+  "stats_file": "/data/stats.json",
+  "extra_args": [],
+  "vps": [
+    {
+      "name": "vps-1",
+      "host": "YOUR_VPS_1_IP",
+      "password": "YOUR_VPS_1_PASSWORD",
+      "hostkey": "YOUR_VPS_1_HOSTKEY"
+    }
+  ]
+}

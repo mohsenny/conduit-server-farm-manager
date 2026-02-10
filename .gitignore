@@ -1,0 +1,13 @@
+config/conduit.json
+dashboard/config.json
+dashboard/data.db
+dashboard/__pycache__/
+*.pyc
+*.log
+*.tmp
+*.swp
+*.swo
+.env
+.env.*
+.DS_Store
+tmp_hostkey

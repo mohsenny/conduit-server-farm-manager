@@ -1,0 +1,1915 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Conduit Local Dashboard</title>
+  <style>
+    :root {
+      --bg: #0c0f14;
+      --panel: #141a22;
+      --panel-2: #0f141c;
+      --text: #e8edf2;
+      --muted: #8fa0b3;
+      --accent: #48d18f;
+      --primary: #7c6df2;
+      --warn: #f6c344;
+      --danger: #f16666;
+      --border: #253040;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+    }
+    .tab {
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 6px 20px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+    }
+    .tab.active {
+      color: var(--primary);
+      font-weight: 700;
+      border-bottom-color: var(--primary);
+    }
+    .status {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      text-align: right;
+      min-width: 180px;
+    }
+    .status .meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-check {
+      width: 14px;
+      height: 14px;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .status-check svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.02);
+      --status-color: var(--muted);
+      border-color: var(--status-color);
+      color: var(--status-color);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.2) inset;
+    }
+    .status-pill[data-state="live"] { --status-color: var(--accent); }
+    .status-pill[data-state="stale"] { --status-color: var(--warn); }
+    .status-pill[data-state="warn"] { --status-color: #f1a64a; }
+    .status-pill[data-state="down"] { --status-color: var(--danger); }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--status-color);
+      box-shadow: 0 0 8px var(--status-color);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.4); opacity: 0.35; }
+      100% { transform: scale(0.9); opacity: 0.8; }
+    }
+    .status-detail {
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 320px;
+    }
+    .title { display: none; }
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .hidden { display: none !important; }
+    .vps-list {
+      margin-bottom: 18px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .vps-card {
+        cursor: pointer;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        min-height: 190px;
+        border-left-color: var(--primary);
+        border-color: rgba(124, 109, 242, 0.45);
+        box-shadow: 0 0 0 1px rgba(124, 109, 242, 0.2) inset;
+        position: relative;
+        overflow: hidden;
+      }
+    .vps-card:hover {
+      border-color: rgba(124, 109, 242, 0.95);
+      box-shadow: 0 0 0 1px rgba(124, 109, 242, 0.5) inset, 0 10px 20px rgba(0, 0, 0, 0.35);
+      background: linear-gradient(180deg, rgba(124, 109, 242, 0.1) 0%, rgba(124, 109, 242, 0.02) 100%);
+    }
+    .vps-card.selected {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px rgba(124, 109, 242, 0.2) inset;
+    }
+    .vps-card .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .vps-card .title {
+      display: block;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--primary);
+      text-transform: uppercase;
+    }
+    .vps-card .ip {
+      font-size: 13px;
+      color: var(--muted);
+    }
+      .vps-card .vps-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 6px;
+      }
+      .vps-card .vps-meta-value {
+        font-size: 20px;
+        font-weight: 800;
+        color: #f5f7ff;
+        letter-spacing: 0.4px;
+      }
+      .vps-card .vps-meta-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: rgba(216, 226, 255, 0.6);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .vps-card .vps-usage {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        gap: 8px;
+      }
+      .vps-card .vps-usage .label {
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .vps-card .mini-icon {
+        width: 14px;
+        height: 14px;
+        color: rgba(216, 226, 255, 0.7);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .vps-card .mini-icon svg {
+        width: 14px;
+        height: 14px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .vps-card .vps-usage .value {
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .usage-low { color: #2fd58a; }
+      .usage-normal { color: #b9e05a; }
+      .usage-high { color: #f1b84b; }
+      .usage-very-high { color: #f06a3e; }
+      .vps-spark {
+        position: absolute;
+        left: 50%;
+        right: 0;
+        bottom: 0;
+        height: 45%;
+        width: 100%;
+        opacity: 0.26;
+        pointer-events: none;
+      }
+      .vps-spark .spark-area {
+        fill: rgba(124, 109, 242, 0.22);
+      }
+    .vps-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border: 1px solid var(--border);
+      --status-color: var(--accent);
+      color: var(--status-color);
+      border-color: var(--status-color);
+      background: rgba(72, 209, 143, 0.12);
+    }
+    .vps-badge[data-state="stale"] { --status-color: var(--warn); background: rgba(246, 195, 68, 0.12); }
+    .vps-badge[data-state="down"] { --status-color: var(--danger); background: rgba(241, 102, 102, 0.12); }
+    .vps-badge .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--status-color);
+      box-shadow: 0 0 6px var(--status-color);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .range-btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .range-btn.active {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(124, 109, 242, 0.15);
+    }
+    .card {
+      background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 90px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card h3 {
+      margin: 0 0 6px 0;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card h3 .h3-right {
+      margin-left: auto;
+    }
+    .card .icon {
+      width: 18px;
+      height: 18px;
+      color: var(--card-accent, var(--border));
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card .icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .grid--conduit .card {
+      --card-accent: #4fd8a1;
+      border-left-color: var(--card-accent);
+      box-shadow: 0 0 0 1px rgba(79, 216, 161, 0.12) inset;
+    }
+    .grid--vps .card { --card-accent: #4aa3ff; border-left-color: var(--card-accent); }
+    .card--inactive {
+      --card-accent: #4b5563;
+      border-left-color: var(--card-accent);
+      opacity: 0.55;
+      filter: grayscale(0.2);
+    }
+    .card--inactive .value {
+      color: var(--muted);
+    }
+    .card .value {
+      font-size: 26px;
+      font-weight: 600;
+    }
+    .card .sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .card.vps-card {
+      border-color: rgba(124, 109, 242, 0.45);
+      border-left-color: var(--primary);
+      box-shadow: 0 0 0 1px rgba(124, 109, 242, 0.2) inset;
+    }
+    .card.clickable {
+      cursor: pointer;
+    }
+    .stack {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .chart-card {
+      height: 280px;
+    }
+    .chart-card canvas {
+      width: 100% !important;
+      height: 210px !important;
+    }
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .chart-header h3 {
+      margin: 0;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: flex-end;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      padding: 2px 4px;
+      border-radius: 8px;
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    .legend-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .legend-item.is-muted {
+      opacity: 0.45;
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 6px color-mix(in srgb, currentColor 70%, transparent);
+      flex: 0 0 auto;
+    }
+    .chart-card {
+      position: relative;
+    }
+    .chart-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(10, 12, 16, 0.55);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .chart-card.is-loading .chart-loading {
+      opacity: 1;
+    }
+    .card-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(10, 12, 16, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      border-radius: 14px;
+    }
+    .card.is-loading .card-loading {
+      opacity: 1;
+    }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      border-top-color: var(--accent);
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .chart-sub {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .sparkline {
+      position: absolute;
+      left: 50%;
+      right: 0;
+      bottom: 0;
+      height: 45%;
+      width: 100%;
+      display: block;
+      pointer-events: none;
+    }
+    .sparkline path.area {
+      opacity: 1;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      text-align: left;
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.8px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(72, 209, 143, 0.15);
+      color: var(--accent);
+      font-size: 11px;
+      margin-left: 6px;
+    }
+    .muted { color: var(--muted); }
+    .footer {
+      margin-top: 18px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .vps-ip-value {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .vps-ip-text {
+      font-size: inherit;
+      font-weight: inherit;
+      letter-spacing: 0.3px;
+    }
+    .ip-toggle {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 2px 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .ip-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .ip-toggle svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+    }
+    .ip-toggle .icon-eye-off { display: none; }
+    .ip-toggle[data-revealed="true"] .icon-eye { display: none; }
+    .ip-toggle[data-revealed="true"] .icon-eye-off { display: block; }
+    body[data-view="vps"] #card-vps-ip { order: 0; }
+    body[data-view="vps"] #card-vps-count { order: 4; }
+    @media (max-width: 900px) {
+      .row { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 980px) {
+      .vps-list { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+    }
+    @media (max-width: 680px) {
+      .vps-list { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="tabs">
+        <button class="tab active" data-view="overview">Overview</button>
+        <button class="tab" data-view="vps">VPS List</button>
+      </div>
+      <div class="status">
+        <div class="meta" id="last-updated">
+          <span class="status-check" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M5 13l4 4L19 7"></path>
+            </svg>
+          </span>
+          <span id="last-updated-text">Waiting for data...</span>
+        </div>
+        <span class="vps-badge hidden" id="page-vps-status" data-state="live">
+          <span class="status-dot"></span>
+          <span class="status-text">LIVE</span>
+        </span>
+      </div>
+    </header>
+
+    <section class="grid vps-list hidden" id="vps-list"></section>
+
+    <div id="detail-view">
+      <section class="grid grid--conduit" id="conduit-row">
+        <div class="card card--clients" id="card-vps-count">
+        <h3>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="6" rx="2"></rect>
+              <rect x="3" y="14" width="18" height="6" rx="2"></rect>
+              <path d="M7 7h2M7 17h2"></path>
+            </svg>
+          </span>
+          VPS Count
+        </h3>
+        <div class="value" id="vps-count">--</div>
+        <div class="sub">Active nodes</div>
+      </div>
+        <div class="card card--clients" id="card-clients">
+        <h3>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="9" cy="8" r="3"></circle>
+              <path d="M3 19c0-3 3-5 6-5"></path>
+              <circle cx="17" cy="9" r="2.5"></circle>
+              <path d="M14.5 19c0-2 2.2-3.5 4.5-3.5"></path>
+            </svg>
+          </span>
+          Clients
+        </h3>
+        <div class="value" id="clients">--</div>
+        <div class="sub" id="clients-metric"></div>
+        <svg class="sparkline" id="spark-clients" data-color="#4fd8a1"></svg>
+      </div>
+        <div class="card card--upload" id="card-upload">
+        <h3>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 17V7"></path>
+              <path d="M8 11l4-4 4 4"></path>
+              <path d="M5 20h14"></path>
+            </svg>
+          </span>
+          Upload
+        </h3>
+        <div class="value" id="upload">--</div>
+        <div class="sub" id="upload-metric"></div>
+        <svg class="sparkline" id="spark-upload" data-color="#4fd8a1"></svg>
+      </div>
+        <div class="card card--download" id="card-download">
+        <h3>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 7v10"></path>
+              <path d="M8 13l4 4 4-4"></path>
+              <path d="M5 20h14"></path>
+            </svg>
+          </span>
+          Download
+        </h3>
+        <div class="value" id="download">--</div>
+        <div class="sub" id="download-metric"></div>
+        <svg class="sparkline" id="spark-download" data-color="#4fd8a1"></svg>
+      </div>
+      <div class="card card--clients hidden" id="card-vps-ip">
+        <h3>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16M6 7v10M18 7v10M4 17h16"></path>
+              <circle cx="8" cy="12" r="1.6"></circle>
+              <circle cx="12" cy="12" r="1.6"></circle>
+              <circle cx="16" cy="12" r="1.6"></circle>
+            </svg>
+          </span>
+          <span id="vps-title">VPS</span>
+        </h3>
+        <div class="value vps-ip-value">
+          <span class="vps-ip-text" id="vps-ip">--</span>
+        </div>
+        <div class="ip-toggle-row">
+          <button class="ip-toggle" id="vps-ip-toggle" title="Reveal IP" data-revealed="false">
+            <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 3l18 18"></path>
+              <path d="M10.6 10.6a3 3 0 0 0 4.24 4.24"></path>
+              <path d="M9.5 5.5A11.6 11.6 0 0 1 12 5c6 0 10 7 10 7a19.4 19.4 0 0 1-3.2 3.7"></path>
+              <path d="M6.1 6.1C3.5 8 2 12 2 12s4 7 10 7c1.4 0 2.7-.3 3.9-.8"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      </section>
+
+      <section class="grid grid--vps" id="vps-row">
+      <div class="card card--cpu">
+        <h3>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="7" y="7" width="10" height="10" rx="2"></rect>
+              <path d="M9 3v3M12 3v3M15 3v3M9 18v3M12 18v3M15 18v3M3 9h3M3 12h3M3 15h3M18 9h3M18 12h3M18 15h3"></path>
+            </svg>
+          </span>
+          CPU
+        </h3>
+        <div class="value" id="cpu">--</div>
+        <div class="sub">Server usage</div>
+        <svg class="sparkline" id="spark-cpu" data-color="#4aa3ff"></svg>
+      </div>
+      <div class="card card--ram">
+        <h3>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="4" y="7" width="16" height="10" rx="2"></rect>
+              <path d="M8 7v-2M12 7v-2M16 7v-2M8 17v2M12 17v2M16 17v2"></path>
+            </svg>
+          </span>
+          RAM
+        </h3>
+        <div class="value" id="ram">--</div>
+        <div class="sub" id="ram-sub">--</div>
+        <svg class="sparkline" id="spark-ram" data-color="#4aa3ff"></svg>
+      </div>
+      <div class="card card--net-in">
+        <h3>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 12h10"></path>
+              <path d="M10 8l4 4-4 4"></path>
+              <path d="M16 5h4v14h-4"></path>
+            </svg>
+          </span>
+          Net In
+        </h3>
+        <div class="value" id="net-in">--</div>
+        <div class="sub">Current rate</div>
+        <svg class="sparkline" id="spark-net-in" data-color="#4aa3ff"></svg>
+      </div>
+      <div class="card card--net-out">
+        <h3>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 12H10"></path>
+              <path d="M14 8l-4 4 4 4"></path>
+              <path d="M4 5h4v14H4"></path>
+            </svg>
+          </span>
+          Net Out
+        </h3>
+        <div class="value" id="net-out">--</div>
+        <div class="sub">Current rate</div>
+        <svg class="sparkline" id="spark-net-out" data-color="#4aa3ff"></svg>
+      </div>
+      </section>
+      <div class="controls">
+      <div class="meta">Range:</div>
+      <button class="range-btn" data-range="1h">1h</button>
+      <button class="range-btn" data-range="5h">5h</button>
+      <button class="range-btn active" data-range="24h">24h</button>
+      <button class="range-btn" data-range="7d">7d</button>
+      <button class="range-btn" data-range="30d">30d</button>
+      <button class="range-btn" data-range="all">All</button>
+    </div>
+
+      <section class="stack" id="charts">
+      <div class="card chart-card" id="card-clients-chart">
+        <div class="chart-header">
+          <h3>Clients Over Time</h3>
+          <div class="legend" id="clientsLegend"></div>
+        </div>
+        <div class="chart-loading"><div class="spinner"></div><div>Loading…</div></div>
+        <canvas id="clientsChart"></canvas>
+      </div>
+      <div class="card chart-card" id="card-geo-chart">
+        <div class="chart-header">
+          <h3>Active Remote IPs by Country</h3>
+          <div class="legend" id="geoLegend"></div>
+        </div>
+        <div class="chart-loading"><div class="spinner"></div><div>Loading…</div></div>
+        <canvas id="geoChart"></canvas>
+      </div>
+      <div class="card chart-card" id="card-bandwidth-chart">
+        <div class="chart-header">
+          <h3>Bandwidth (Rate)</h3>
+          <div class="legend" id="bandwidthLegend"></div>
+        </div>
+        <div class="chart-loading"><div class="spinner"></div><div>Loading…</div></div>
+        <canvas id="bandwidthChart"></canvas>
+      </div>
+      </section>
+    </div>
+
+
+    
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    const SUMMARY_REFRESH_MS = 5000;
+    const SERIES_REFRESH_MS = 30000;
+      let summaryTimer = null;
+      let seriesTimer = null;
+      let vpsTimer = null;
+      let vpsSparkTimer = null;
+      const seriesCache = new Map();
+      const vpsSparkData = {};
+    const CHART_UPDATE_MODE = "none";
+    let currentView = "overview";
+    let selectedVps = null;
+    let vpsDirectory = {};
+    const sparkHistory = {
+      cpu: [],
+      ram: [],
+      netIn: [],
+      netOut: [],
+      clients: [],
+      upload: [],
+      download: []
+    };
+    const SPARK_LIMIT = 60;
+
+    const fmtBytes = (n) => {
+      if (n === null || n === undefined) return "--";
+      if (!isFinite(n)) return "--";
+      const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+      let i = 0;
+      let val = Math.abs(n);
+      while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
+      return `${(n < 0 ? -val : val).toFixed(2)} ${units[i]}`;
+    };
+
+    const fmtBytesShort = (n) => {
+      if (n === null || n === undefined) return "--";
+      if (!isFinite(n)) return "--";
+      const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+      let i = 0;
+      let val = Math.abs(n);
+      while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
+      const digits = val >= 100 ? 0 : (val >= 10 ? 1 : 2);
+      return `${(n < 0 ? -val : val).toFixed(digits)} ${units[i]}`;
+    };
+
+    const fmtRate = (n) => {
+      if (n === null || n === undefined) return "--";
+      return `${fmtBytesShort(n)}/s`;
+    };
+
+      const fmtNumber = (n) => {
+        if (n === null || n === undefined) return "--";
+        if (!isFinite(n)) return "--";
+        return n.toLocaleString();
+      };
+
+      const usageClass = (pct) => {
+        if (pct === null || pct === undefined || !isFinite(pct)) return "";
+        if (pct >= 85) return "usage-very-high";
+        if (pct >= 70) return "usage-high";
+        if (pct >= 40) return "usage-normal";
+        return "usage-low";
+      };
+
+      const buildSparkSvg = (values) => {
+        if (!values || values.length < 2) return "";
+        const cleaned = values.filter((v) => isFinite(v));
+        if (cleaned.length < 2) return "";
+        const min = Math.min(...cleaned);
+        const max = Math.max(...cleaned);
+        const range = max - min || 1;
+        const width = 100;
+        const height = 40;
+        const points = values.map((v, i) => {
+          const x = (i / Math.max(1, values.length - 1)) * width;
+          const y = height - ((v - min) / range) * height;
+          return { x, y };
+        });
+        const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
+        const area = `M 0 ${height} L ` + points.map((p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" L ") + ` L ${width} ${height} Z`;
+        return `
+          <svg class="vps-spark" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+            <path class="spark-area" d="${area}"></path>
+          </svg>
+        `;
+      };
+
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+
+    const setChartLoading = (isLoading) => {
+      ["card-clients-chart", "card-geo-chart", "card-bandwidth-chart"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle("is-loading", isLoading);
+      });
+    };
+
+    const ensureWidgetLoading = () => {
+      const cards = document.querySelectorAll("#conduit-row .card, #vps-row .card, #card-vps-ip");
+      cards.forEach((card) => {
+        if (!card || card.classList.contains("chart-card")) return;
+        if (card.querySelector(".card-loading")) return;
+        const overlay = document.createElement("div");
+        overlay.className = "card-loading";
+        overlay.innerHTML = '<div class="spinner"></div><div>Loading…</div>';
+        card.appendChild(overlay);
+      });
+    };
+
+    let widgetLoadingTimer = null;
+    let chartLoadingTimer = null;
+    const setWidgetLoading = (isLoading) => {
+      const cards = document.querySelectorAll("#conduit-row .card, #vps-row .card, #card-vps-ip");
+      cards.forEach((card) => {
+        if (!card || card.classList.contains("chart-card")) return;
+        card.classList.toggle("is-loading", isLoading);
+      });
+    };
+
+    const beginWidgetLoading = () => {
+      if (widgetLoadingTimer) clearTimeout(widgetLoadingTimer);
+      widgetLoadingTimer = setTimeout(() => setWidgetLoading(true), 600);
+    };
+
+    const endWidgetLoading = () => {
+      if (widgetLoadingTimer) {
+        clearTimeout(widgetLoadingTimer);
+        widgetLoadingTimer = null;
+      }
+      setWidgetLoading(false);
+    };
+
+    const setInactive = (id, isInactive) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (isInactive) {
+        el.classList.add("card--inactive");
+      } else {
+        el.classList.remove("card--inactive");
+      }
+    };
+
+    const setStatus = (state, label, detail) => {
+      const pill = document.getElementById("status-pill");
+      if (pill) pill.dataset.state = state;
+      setText("status-label", label);
+      setText("status-detail", detail || "");
+    };
+
+    const maskIp = (ip) => {
+      if (!ip) return "--";
+      const parts = String(ip).split(".");
+      if (parts.length === 4) {
+        return `${parts[0]}.${parts[1]}.x.x`;
+      }
+      return ip;
+    };
+
+    const formatVpsTitle = (label) => {
+      if (!label) return "VPS";
+      const trimmed = String(label).trim();
+      const match = trimmed.match(/^VPS\s*#?\s*(\d+)$/i);
+      if (match) {
+        return `VPS #${match[1]}`;
+      }
+      return trimmed;
+    };
+
+    const setVpsIp = (full, label) => {
+      const ipText = document.getElementById("vps-ip");
+      const titleText = document.getElementById("vps-title");
+      const toggle = document.getElementById("vps-ip-toggle");
+      const title = formatVpsTitle(label || "VPS");
+      if (titleText) titleText.textContent = title;
+      if (ipText) {
+        ipText.dataset.full = full || "";
+        ipText.textContent = full ? maskIp(full) : "--";
+      }
+      if (toggle) {
+        toggle.dataset.revealed = "false";
+        toggle.title = "Reveal IP";
+      }
+    };
+
+    const hexToRgba = (hex, alpha) => {
+      if (!hex) return `rgba(255,255,255,${alpha})`;
+      let h = hex.replace("#", "").trim();
+      if (h.length === 3) {
+        h = h.split("").map((c) => c + c).join("");
+      }
+      if (h.length !== 6) return `rgba(255,255,255,${alpha})`;
+      const r = parseInt(h.slice(0, 2), 16);
+      const g = parseInt(h.slice(2, 4), 16);
+      const b = parseInt(h.slice(4, 6), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    };
+
+    const renderSparkline = (id, values) => {
+      const svg = document.getElementById(`spark-${id}`);
+      if (!svg) return;
+      if (!values || values.length === 0) {
+        svg.innerHTML = "";
+        return;
+      }
+      const padded = values.slice(-SPARK_LIMIT);
+      let normalized = padded.slice();
+      const padCount = SPARK_LIMIT - normalized.length;
+      if (padCount > 0) {
+        const first = normalized.find((v) => isFinite(v)) ?? 0;
+        normalized = Array(padCount).fill(first).concat(normalized);
+      }
+      // forward-fill nulls to avoid truncated right edge
+      let lastVal = normalized.find((v) => isFinite(v));
+      normalized = normalized.map((v) => {
+        if (isFinite(v)) { lastVal = v; return v; }
+        return lastVal ?? 0;
+      });
+      const cleaned = normalized.filter((v) => isFinite(v));
+      if (cleaned.length < 2) {
+        svg.innerHTML = "";
+        return;
+      }
+      const color = svg.dataset.color || "#4fd8a1";
+      const w = 100;
+      const h = 40;
+      const min = Math.min(...cleaned);
+      const max = Math.max(...cleaned);
+      const range = max - min || 1;
+      const pts = normalized.map((v, i) => {
+        if (!isFinite(v)) return null;
+        const x = (i / Math.max(1, normalized.length - 1)) * w;
+        const y = h - ((v - min) / range) * h;
+        return [x, y];
+      }).filter(Boolean);
+      if (pts.length < 2) {
+        svg.innerHTML = "";
+        return;
+      }
+      const areaPath = `M ${pts[0][0].toFixed(2)} ${h} L ` +
+        pts.map((p) => `${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join(" L ") +
+        ` L ${pts[pts.length - 1][0].toFixed(2)} ${h} Z`;
+      svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      let area = svg.querySelector("path.area");
+      if (!area) {
+        area = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        area.classList.add("area");
+        svg.appendChild(area);
+      }
+      area.setAttribute("d", areaPath);
+      area.setAttribute("fill", hexToRgba(color, 0.1));
+    };
+
+    const pushSpark = (key, value) => {
+      if (!sparkHistory[key]) return;
+      sparkHistory[key].push(value);
+      if (sparkHistory[key].length > SPARK_LIMIT) {
+        sparkHistory[key].shift();
+      }
+      renderSparkline(key, sparkHistory[key]);
+    };
+
+    const setView = (view) => {
+      currentView = view;
+      document.body.dataset.view = view;
+      const tabs = document.querySelectorAll(".tab");
+      tabs.forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.view === view);
+      });
+      updateVisibility();
+    };
+
+    const updateVisibility = () => {
+      const isOverview = currentView === "overview";
+      const hasSelection = !!selectedVps;
+      const vpsRow = document.getElementById("vps-row");
+      const vpsList = document.getElementById("vps-list");
+      const detailView = document.getElementById("detail-view");
+      const vpsCountCard = document.getElementById("card-vps-count");
+      const vpsIpCard = document.getElementById("card-vps-ip");
+      const conduitRow = document.getElementById("conduit-row");
+      const pageStatus = document.getElementById("page-vps-status");
+      if (vpsList) vpsList.classList.toggle("hidden", isOverview || hasSelection);
+      if (detailView) detailView.classList.toggle("hidden", !isOverview && !hasSelection);
+      if (vpsRow) vpsRow.classList.toggle("hidden", isOverview || !hasSelection);
+      if (vpsCountCard) vpsCountCard.classList.toggle("hidden", !isOverview);
+      if (vpsIpCard) vpsIpCard.classList.toggle("hidden", isOverview || !hasSelection);
+      if (pageStatus) pageStatus.classList.toggle("hidden", isOverview || !hasSelection);
+      if (conduitRow) {
+        if (isOverview) {
+          if (vpsCountCard) conduitRow.insertBefore(vpsCountCard, conduitRow.firstChild);
+        } else if (hasSelection) {
+          if (vpsIpCard) conduitRow.insertBefore(vpsIpCard, conduitRow.firstChild);
+        }
+      }
+    };
+
+    const looksLikeIp = (text) => /^\d{1,3}(?:\.\d{1,3}){3}$/.test(text || "");
+
+    const vpsStatusBadge = (status) => {
+      if (!status) return { label: "Unknown", cls: "", state: "stale" };
+      if (status.metrics_ok === false) return { label: "Down", cls: "", state: "down" };
+      if (status.stale) return { label: "Stale", cls: "", state: "stale" };
+      return { label: "Live", cls: "", state: "live" };
+    };
+
+    const renderVpsList = (list) => {
+      const container = document.getElementById("vps-list");
+      if (!container) return;
+      container.innerHTML = "";
+      vpsDirectory = {};
+      if (!list || list.length === 0) { return; }
+        list.forEach((vps, index) => {
+          const card = document.createElement("div");
+          card.className = "card vps-card";
+          if (selectedVps && selectedVps === vps.id) {
+            card.classList.add("selected");
+          }
+          const maskedHost = maskIp(vps.host || "");
+          const clientsVal = Number(vps.clients);
+          const clientsDisplay = Number.isFinite(clientsVal) ? fmtNumber(clientsVal) : "--";
+          const system = vps.system || {};
+          const cpuPct = Number(system.cpu_percent);
+          const ramPct = system && system.mem_total_bytes
+            ? (Number(system.mem_used_bytes || 0) / Number(system.mem_total_bytes || 1)) * 100
+            : null;
+          const cpuText = Number.isFinite(cpuPct) ? `${cpuPct.toFixed(1)}%` : "--";
+          const ramText = Number.isFinite(ramPct) ? `${ramPct.toFixed(1)}%` : "--";
+          const cpuClass = usageClass(cpuPct);
+          const ramClass = usageClass(ramPct);
+          const sparkRows = vpsSparkData[vps.id];
+          const sparkValues = Array.isArray(sparkRows)
+            ? sparkRows.map((row) => (row && row.value !== undefined ? row.value : row)).filter((v) => v !== null && v !== undefined)
+            : [];
+          const sparkSvg = buildSparkSvg(sparkValues);
+          const baseLabel = vps.label || vps.id || "";
+          const displayLabel = looksLikeIp(baseLabel) || baseLabel === (vps.host || "") ? `VPS #${index + 1}` : baseLabel;
+          const badge = vpsStatusBadge(vps.status);
+          vpsDirectory[vps.id] = {
+            label: displayLabel,
+            host: vps.host || vps.id || "",
+          };
+          card.innerHTML = `
+            ${sparkSvg}
+            <div class="title-row">
+              <div class="title">${displayLabel}</div>
+              <span class="vps-badge ${badge.cls}" data-state="${badge.state}">
+                <span class="status-dot"></span>
+                <span class="status-text">${badge.label}</span>
+              </span>
+            </div>
+            <div class="ip">${maskedHost}</div>
+              <div class="vps-meta">
+                <span class="vps-meta-label">
+                  <span class="mini-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="9" cy="8" r="3"></circle>
+                      <path d="M3 19c0-3 3-5 6-5"></path>
+                      <circle cx="17" cy="9" r="2.5"></circle>
+                      <path d="M14.5 19c0-2 2.2-3.5 4.5-3.5"></path>
+                    </svg>
+                  </span>
+                  Active clients
+                </span>
+                <span class="vps-meta-value">${clientsDisplay}</span>
+              </div>
+              <div class="vps-usage">
+                <span class="label">
+                  <span class="mini-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="7" y="7" width="10" height="10" rx="2"></rect>
+                      <path d="M9 3v3M12 3v3M15 3v3M9 18v3M12 18v3M15 18v3M3 9h3M3 12h3M3 15h3M18 9h3M18 12h3M18 15h3"></path>
+                    </svg>
+                  </span>
+                  CPU
+                </span>
+                <span class="value ${cpuClass}">${cpuText}</span>
+              </div>
+              <div class="vps-usage">
+                <span class="label">
+                  <span class="mini-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="4" y="7" width="16" height="10" rx="2"></rect>
+                      <path d="M8 7v-2M12 7v-2M16 7v-2M8 17v2M12 17v2M16 17v2"></path>
+                    </svg>
+                  </span>
+                  RAM
+                </span>
+                <span class="value ${ramClass}">${ramText}</span>
+              </div>
+            `;
+        card.addEventListener("click", () => {
+          selectedVps = vps.id;
+          setView("vps");
+          update();
+          loadSeries();
+          renderVpsList(list);
+        });
+        container.appendChild(card);
+      });
+    };
+
+      const refreshVpsList = async () => {
+        if (refreshVpsList.inFlight) return;
+        refreshVpsList.inFlight = true;
+        try {
+          const res = await fetch("/api/vps", { cache: "no-store" });
+          if (!res.ok) return;
+          const data = await res.json();
+          const list = data.vps || [];
+        if (selectedVps && !list.find((v) => v.id === selectedVps)) {
+          selectedVps = null;
+        }
+        renderVpsList(list);
+        if (currentView === "vps") {
+          update();
+          loadSeries();
+        }
+        } catch (err) {
+          // ignore
+        } finally {
+          refreshVpsList.inFlight = false;
+        }
+      };
+
+      const fetchVpsSparks = async () => {
+        if (fetchVpsSparks.inFlight) return;
+        fetchVpsSparks.inFlight = true;
+        try {
+          const res = await fetch("/api/vps_sparks?range=24h", { cache: "no-store" });
+          if (!res.ok) return;
+          const data = await res.json();
+          const sparks = data.sparks || {};
+          Object.keys(sparks).forEach((key) => {
+            vpsSparkData[key] = sparks[key] || [];
+          });
+          if (currentView === "overview") {
+            refreshVpsList();
+          }
+        } catch (err) {
+          // ignore
+        } finally {
+          fetchVpsSparks.inFlight = false;
+        }
+      };
+
+    const update = async () => {
+      if (update.inFlight) return;
+      update.inFlight = true;
+      beginWidgetLoading();
+      try {
+        const scopedVps = currentView === "vps" ? selectedVps : null;
+        const summaryUrl = scopedVps ? `/api/summary?vps=${encodeURIComponent(scopedVps)}` : "/api/summary";
+        const res = await fetch(summaryUrl, { cache: "no-store" });
+        if (!res.ok) throw new Error("Bad response");
+        const data = await res.json();
+        const status = data.status || {};
+        const conduit = data.conduit || {};
+        let state = "live";
+        let label = "Live";
+        let detail = "";
+        if (status.metrics_ok === false) {
+          state = "down";
+          label = "Disconnected";
+          detail = status.last_error || "Metrics unavailable";
+        } else if (status.stale) {
+          state = "stale";
+          label = "Stale";
+          detail = status.age_sec ? `Last update ${status.age_sec}s ago` : "Last update delayed";
+        } else if (conduit.is_live !== null && conduit.is_live !== undefined && conduit.is_live < 1) {
+          state = "warn";
+          label = "Broker Offline";
+          detail = "Conduit not connected to broker";
+        } else if ((conduit.connected || 0) === 0 && (conduit.announcing || 0) > 0) {
+          detail = `Announcing ${Math.round(conduit.announcing)} slots, no clients yet`;
+        }
+        setStatus(state, label, detail);
+        const pageStatusEl = document.getElementById("page-vps-status");
+        if (pageStatusEl) {
+          pageStatusEl.dataset.state = state;
+          const textEl = pageStatusEl.querySelector(".status-text");
+          if (textEl) textEl.textContent = label.toUpperCase();
+        }
+
+        setText("last-updated-text", `Last updated: ${data.timestamp}`);
+        if (data.vps_count !== undefined) {
+          setText("vps-count", fmtNumber(data.vps_count));
+        }
+        setText("clients", fmtNumber(data.selected.clients_value));
+        setText("upload", fmtBytes(data.selected.bytes_up_value));
+        setText("download", fmtBytes(data.selected.bytes_down_value));
+
+        const clientsVal = Number(data.selected.clients_value || 0);
+        const upVal = Number(data.selected.bytes_up_value || 0);
+        const downVal = Number(data.selected.bytes_down_value || 0);
+        setInactive("card-clients", !isFinite(clientsVal) || clientsVal === 0);
+        setInactive("card-upload", !isFinite(upVal) || upVal === 0);
+        setInactive("card-download", !isFinite(downVal) || downVal === 0);
+
+        setText("clients-metric", data.selected.clients_metric || "No metric detected");
+        setText("upload-metric", "Total bytes transferred");
+        setText("download-metric", "Total bytes transferred");
+
+        const system = data.system || {};
+        if (system && !system.error) {
+          const cpu = system.cpu_percent;
+          const memUsed = system.mem_used_bytes;
+          const memTotal = system.mem_total_bytes;
+          const netIn = system.net_rx_bps;
+          const netOut = system.net_tx_bps;
+          if (cpu !== null && cpu !== undefined) {
+            setText("cpu", `${cpu.toFixed(1)}%`);
+          } else {
+            setText("cpu", "--");
+          }
+          if (memUsed !== null && memUsed !== undefined && memTotal) {
+            const pct = Math.min(100, Math.max(0, (memUsed / memTotal) * 100));
+            setText("ram", `${pct.toFixed(1)}%`);
+            setText("ram-sub", `${fmtBytesShort(memUsed)} / ${fmtBytesShort(memTotal)}`);
+            pushSpark("ram", pct);
+          } else {
+            setText("ram", "--");
+            setText("ram-sub", "--");
+          }
+          setText("net-in", fmtRate(netIn));
+          setText("net-out", fmtRate(netOut));
+          if (cpu !== null && cpu !== undefined) { pushSpark("cpu", cpu); }
+          if (netIn !== null && netIn !== undefined) { pushSpark("netIn", netIn); }
+          if (netOut !== null && netOut !== undefined) { pushSpark("netOut", netOut); }
+        } else {
+          setText("cpu", "--");
+          setText("ram", "--");
+          setText("ram-sub", "--");
+          setText("net-in", "--");
+          setText("net-out", "--");
+          if (!detail && system && system.error) {
+            detail = "System stats unavailable";
+            setStatus(state, label, detail);
+          }
+        }
+        if (currentView === "vps") {
+          const details = vpsDirectory[selectedVps] || {};
+          setVpsIp(details.host || data.vps_ip || data.vps_id || "", details.label || selectedVps || "VPS");
+        } else {
+          setVpsIp("", "VPS");
+        }
+      } catch (err) {
+        setStatus("down", "Disconnected", "Dashboard cannot reach metrics");
+      } finally {
+        endWidgetLoading();
+        update.inFlight = false;
+      }
+    };
+
+    const rangeButtons = document.querySelectorAll(".range-btn");
+    let currentRange = "24h";
+    rangeButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        rangeButtons.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentRange = btn.dataset.range;
+        loadSeries();
+        resetPolling();
+      });
+    });
+
+    const tabs = document.querySelectorAll(".tab");
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const view = tab.dataset.view;
+        selectedVps = null;
+        setView(view);
+        update();
+        loadSeries();
+        refreshVpsList();
+        resetPolling();
+      });
+    });
+
+    const vpsCountCard = document.getElementById("card-vps-count");
+    if (vpsCountCard) {
+      vpsCountCard.classList.add("clickable");
+      vpsCountCard.addEventListener("click", () => {
+        selectedVps = null;
+        setView("vps");
+        update();
+        loadSeries();
+        refreshVpsList();
+        resetPolling();
+      });
+    }
+
+    const ipToggle = document.getElementById("vps-ip-toggle");
+    if (ipToggle) {
+      ipToggle.addEventListener("click", () => {
+        const ipText = document.getElementById("vps-ip");
+        if (!ipText) return;
+        const full = ipText.dataset.full || "";
+        if (!full) return;
+        const revealed = ipToggle.dataset.revealed === "true";
+        if (revealed) {
+          ipText.textContent = maskIp(full);
+          ipToggle.dataset.revealed = "false";
+          ipToggle.title = "Reveal IP";
+        } else {
+          ipText.textContent = full;
+          ipToggle.dataset.revealed = "true";
+          ipToggle.title = "Hide IP";
+        }
+      });
+    }
+
+    const palette = [
+      "#48d18f", "#4aa3ff", "#f6c344", "#9d7bff", "#ff7ca8",
+      "#4bd3c7", "#f78c6b", "#8fd37e", "#6bb5ff", "#f2a65a"
+    ];
+    const fixedColors = {
+      "DE": "#4e79a7",
+      "FR": "#f28e2b",
+      "IR": "#59a14f",
+      "FI": "#e15759",
+      "US": "#9c755f",
+      "CZ": "#edc948",
+      "GB": "#b07aa1",
+      "RU": "#76b7b2"
+    };
+    const regionNames = (typeof Intl !== "undefined" && Intl.DisplayNames)
+      ? new Intl.DisplayNames(["en"], { type: "region" })
+      : null;
+    const toCountryName = (code) => {
+      if (!code) return "";
+      const trimmed = String(code).trim();
+      if (trimmed.length === 2 && regionNames) {
+        const name = regionNames.of(trimmed.toUpperCase());
+        if (name) return name;
+      }
+      return trimmed;
+    };
+    const colorForLabel = (label) => {
+      if (!label) return palette[0];
+      const trimmed = String(label).trim();
+      const upper = trimmed.toUpperCase();
+      if (fixedColors[upper]) return fixedColors[upper];
+      let hash = 0;
+      for (let i = 0; i < trimmed.length; i++) {
+        hash = (hash * 31 + trimmed.charCodeAt(i)) >>> 0;
+      }
+      return palette[hash % palette.length];
+    };
+
+    const clientsBaseDataset = {
+      label: "Clients",
+      data: [],
+      borderColor: "#48d18f",
+      pointBackgroundColor: "#48d18f",
+      pointBorderColor: "#48d18f",
+      pointBorderWidth: 0,
+      spanGaps: true,
+      tension: 0.3,
+      pointRadius: 0,
+      pointHitRadius: 8
+    };
+
+    const clientsChart = new Chart(document.getElementById("clientsChart"), {
+      type: "line",
+      data: { labels: [], datasets: [clientsBaseDataset] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 0 },
+        scales: {
+          x: {
+            ticks: { autoSkip: true, maxTicksLimit: 6, maxRotation: 0, minRotation: 0 },
+            grid: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            grid: { color: "rgba(255,255,255,0.06)" }
+          }
+        },
+        plugins: {
+          tooltip: {
+            mode: "index",
+            intersect: false,
+            filter: (ctx) => {
+              const v = ctx.parsed && typeof ctx.parsed.y === "number" ? ctx.parsed.y : 0;
+              return v > 0;
+            },
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${fmtNumber(Math.round(ctx.parsed.y || 0))}`
+            }
+          },
+          legend: { display: false }
+        }
+      }
+    });
+
+    const geoChart = new Chart(document.getElementById("geoChart"), {
+      type: "line",
+      data: { labels: [], datasets: [] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 0 },
+        scales: {
+          x: {
+            ticks: { autoSkip: true, maxTicksLimit: 6, maxRotation: 0, minRotation: 0 },
+            grid: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            grid: { color: "rgba(255,255,255,0.06)" }
+          }
+        },
+        plugins: {
+          tooltip: {
+            mode: "index",
+            intersect: false,
+            filter: (ctx) => {
+              const v = ctx.parsed && typeof ctx.parsed.y === "number" ? ctx.parsed.y : 0;
+              return v > 0;
+            },
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${fmtNumber(Math.round(ctx.parsed.y || 0))}`
+            }
+          },
+          legend: { display: false }
+        }
+      }
+    });
+
+    const bandwidthChart = new Chart(document.getElementById("bandwidthChart"), {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: "Uploaded",
+            data: [],
+            borderColor: "#4aa3ff",
+            pointBackgroundColor: "#4aa3ff",
+            pointBorderColor: "#4aa3ff",
+            pointBorderWidth: 0,
+            spanGaps: true,
+            tension: 0.3,
+            pointRadius: 0,
+            pointHitRadius: 8
+          },
+          {
+            label: "Downloaded",
+            data: [],
+            borderColor: "#f6c344",
+            pointBackgroundColor: "#f6c344",
+            pointBorderColor: "#f6c344",
+            pointBorderWidth: 0,
+            spanGaps: true,
+            tension: 0.3,
+            pointRadius: 0,
+            pointHitRadius: 8
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 0 },
+        scales: {
+          x: {
+            ticks: { autoSkip: true, maxTicksLimit: 6, maxRotation: 0, minRotation: 0 },
+            grid: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            min: 0,
+            ticks: { callback: (value) => fmtRate(value) },
+            grid: { color: "rgba(255,255,255,0.06)" }
+          }
+        },
+        plugins: {
+          tooltip: {
+            mode: "index",
+            intersect: false,
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${fmtRate(Math.round(ctx.parsed.y || 0))}`
+            }
+          },
+          legend: { display: false }
+        }
+      }
+    });
+
+    const renderLegend = (chart, containerId) => {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.innerHTML = "";
+      const isolated = chart.$legendIsolated || null;
+      chart.data.datasets.forEach((ds) => {
+        const color = ds.borderColor || "#8fa0b3";
+        const item = document.createElement("span");
+        item.className = "legend-item";
+        if (isolated && ds.label !== isolated) {
+          item.classList.add("is-muted");
+        }
+        item.style.color = color;
+        item.dataset.label = ds.label;
+        const dot = document.createElement("span");
+        dot.className = "legend-dot";
+        const text = document.createElement("span");
+        text.textContent = ds.label;
+        item.appendChild(dot);
+        item.appendChild(text);
+        item.addEventListener("click", () => toggleLegend(chart, ds.label));
+        el.appendChild(item);
+      });
+    };
+
+    const toggleLegend = (chart, label) => {
+      if (chart.$legendIsolated === label) {
+        chart.$legendIsolated = null;
+        chart.data.datasets.forEach((ds) => { ds.hidden = false; });
+      } else {
+        chart.$legendIsolated = label;
+        chart.data.datasets.forEach((ds) => { ds.hidden = ds.label !== label; });
+      }
+      chart.update("none");
+      if (chart === clientsChart) renderLegend(clientsChart, "clientsLegend");
+      if (chart === geoChart) renderLegend(geoChart, "geoLegend");
+      if (chart === bandwidthChart) renderLegend(bandwidthChart, "bandwidthLegend");
+    };
+
+    const smoothValues = (values, windowSize) => {
+      if (!values || windowSize <= 1) return values;
+      const out = [];
+      for (let i = 0; i < values.length; i++) {
+        const start = Math.max(0, i - windowSize + 1);
+        let sum = 0;
+        let count = 0;
+        for (let j = start; j <= i; j++) {
+          const v = values[j];
+          if (isFinite(v)) {
+            sum += v;
+            count += 1;
+          }
+        }
+        out.push(count ? sum / count : values[i]);
+      }
+      return out;
+    };
+
+    const padToNow = (series) => {
+      if (!series || series.length === 0) return series || [];
+      const nowTs = Math.floor(Date.now() / 1000);
+      const last = series[series.length - 1];
+      if (nowTs <= last.ts) return series;
+      return series.concat([{
+        ts: nowTs,
+        clients: last.clients,
+        bytes_up: last.bytes_up,
+        bytes_down: last.bytes_down
+      }]);
+    };
+
+    const computeRateSeries = (series) => {
+      if (!series || series.length === 0) return [];
+      const out = [];
+      for (let i = 0; i < series.length; i++) {
+        const curr = series[i];
+        if (i === 0) {
+          out.push({ ts: curr.ts, bytes_up: 0, bytes_down: 0 });
+          continue;
+        }
+        const prev = series[i - 1];
+        const dt = (curr.ts || 0) - (prev.ts || 0);
+        if (!dt || dt <= 0) {
+          out.push({ ts: curr.ts, bytes_up: null, bytes_down: null });
+          continue;
+        }
+        const up = (curr.bytes_up ?? 0) - (prev.bytes_up ?? 0);
+        const down = (curr.bytes_down ?? 0) - (prev.bytes_down ?? 0);
+        out.push({
+          ts: curr.ts,
+          bytes_up: Math.max(0, up / dt),
+          bytes_down: Math.max(0, down / dt)
+        });
+      }
+      return out;
+    };
+
+    const toLabel = (ts) => {
+      const d = new Date(ts * 1000);
+      if (currentRange.endsWith("h") || currentRange === "24h") {
+        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+      return d.toLocaleDateString([], { month: "short", day: "2-digit" });
+    };
+
+    const alignSeries = (rows, labelTs) => {
+      if (!rows || rows.length === 0) return labelTs.map(() => null);
+      const sorted = rows.slice().sort((a, b) => a.ts - b.ts);
+      let idx = 0;
+      let last = null;
+      return labelTs.map((ts) => {
+        while (idx < sorted.length && sorted[idx].ts <= ts) {
+          last = sorted[idx].value;
+          idx += 1;
+        }
+        return last;
+      });
+    };
+
+    const seriesCacheKey = () => {
+      const scope = currentView === "vps" ? (selectedVps || "all") : "all";
+      return `${currentRange}:${scope}`;
+    };
+
+    const mergeSeries = (base, incoming) => {
+      if (!base || base.length === 0) return incoming || [];
+      if (!incoming || incoming.length === 0) return base;
+      const map = new Map();
+      base.forEach((row) => { if (row && row.ts !== undefined) map.set(row.ts, row); });
+      incoming.forEach((row) => { if (row && row.ts !== undefined) map.set(row.ts, row); });
+      return Array.from(map.values()).sort((a, b) => a.ts - b.ts);
+    };
+
+    const mergeCountrySeries = (base, incoming) => {
+      if (!base || Object.keys(base).length === 0) return incoming || {};
+      if (!incoming || Object.keys(incoming).length === 0) return base;
+      const out = { ...base };
+      Object.keys(incoming).forEach((key) => {
+        const rows = incoming[key] || [];
+        if (!out[key]) {
+          out[key] = rows.slice();
+          return;
+        }
+        const map = new Map();
+        out[key].forEach((row) => { if (row && row.ts !== undefined) map.set(row.ts, row); });
+        rows.forEach((row) => { if (row && row.ts !== undefined) map.set(row.ts, row); });
+        out[key] = Array.from(map.values()).sort((a, b) => a.ts - b.ts);
+      });
+      return out;
+    };
+
+      const renderSeriesPayload = (payload) => {
+        const rawSeries = payload.series || [];
+        const series = padToNow(rawSeries);
+        const rateSeries = computeRateSeries(rawSeries);
+        if (series.length > rateSeries.length) {
+          rateSeries.push({
+            ts: series[series.length - 1].ts,
+            bytes_up: null,
+            bytes_down: null
+          });
+        }
+        const labelTs = series.map((s) => s.ts);
+        const labels = labelTs.map((ts) => toLabel(ts));
+      bandwidthChart.data.labels = labels;
+      bandwidthChart.data.datasets[0].data = rateSeries.map((s) => s.bytes_up);
+      bandwidthChart.data.datasets[1].data = rateSeries.map((s) => s.bytes_down);
+      bandwidthChart.update(CHART_UPDATE_MODE);
+
+      clientsChart.data.labels = labels;
+      clientsChart.data.datasets = [clientsBaseDataset];
+      clientsChart.data.datasets[0].data = smoothValues(series.map((s) => s.clients), 3);
+      clientsChart.update(CHART_UPDATE_MODE);
+      renderLegend(clientsChart, "clientsLegend");
+
+      const clientsValues = series.map((s) => s.clients);
+      const uploadValues = rateSeries.map((s) => s.bytes_up);
+      const downloadValues = rateSeries.map((s) => s.bytes_down);
+      sparkHistory.clients = clientsValues.slice(-SPARK_LIMIT);
+      sparkHistory.upload = uploadValues.slice(-SPARK_LIMIT);
+      sparkHistory.download = downloadValues.slice(-SPARK_LIMIT);
+      renderSparkline("clients", sparkHistory.clients);
+      renderSparkline("upload", sparkHistory.upload);
+      renderSparkline("download", sparkHistory.download);
+
+      const countrySeries = payload.country_series || {};
+      const keys = Object.keys(countrySeries).filter((k) => k.startsWith("geo_active_clients:"));
+      const byCountry = {};
+      keys.forEach((key) => {
+        countrySeries[key].forEach((row) => {
+          const country = row.country || key;
+          if (!byCountry[country]) byCountry[country] = [];
+          byCountry[country].push(row);
+        });
+      });
+      const ranked = Object.keys(byCountry).map((country) => {
+        const rows = byCountry[country];
+        const values = alignSeries(rows, labelTs);
+        const lastVal = values.length ? (values[values.length - 1] ?? 0) : 0;
+        return { country, rows, values, lastVal };
+      }).sort((a, b) => b.lastVal - a.lastVal);
+
+      const geoDatasets = ranked.slice(0, 8).map((entry) => {
+        const label = toCountryName(entry.country);
+        const color = colorForLabel(entry.country);
+        return {
+          label,
+          data: smoothValues(entry.values, 3),
+          borderColor: color,
+          pointBackgroundColor: color,
+          pointBorderColor: color,
+          pointBorderWidth: 0,
+          spanGaps: true,
+          tension: 0.3,
+          pointRadius: 0,
+          pointHitRadius: 8
+        };
+      });
+      geoChart.data.labels = labels;
+      geoChart.data.datasets = geoDatasets;
+      geoChart.update(CHART_UPDATE_MODE);
+      renderLegend(geoChart, "geoLegend");
+
+      renderLegend(bandwidthChart, "bandwidthLegend");
+    };
+
+    const loadSeries = async () => {
+      if (loadSeries.inFlight) return;
+      loadSeries.inFlight = true;
+      const cacheKey = seriesCacheKey();
+      const cached = seriesCache.get(cacheKey);
+      const hasCache = !!cached && Array.isArray(cached.series);
+
+      if (!hasCache) {
+        if (chartLoadingTimer) clearTimeout(chartLoadingTimer);
+        chartLoadingTimer = setTimeout(() => setChartLoading(true), 400);
+      } else {
+        renderSeriesPayload(cached);
+      }
+
+      try {
+        const scopedVps = currentView === "vps" ? selectedVps : null;
+        const vpsParam = scopedVps ? `&vps=${encodeURIComponent(scopedVps)}` : "";
+        const sinceParam = hasCache && cached.last_ts ? `&since=${cached.last_ts}` : "";
+        const res = await fetch(`/api/timeseries?range=${currentRange}${vpsParam}${sinceParam}`, { cache: "no-store" });
+        if (!res.ok) throw new Error("Bad response");
+        const data = await res.json();
+        const bucketSec = data.bucket_sec || (cached ? cached.bucket_sec : null);
+        const partial = data.partial === true;
+
+        let series = data.series || [];
+        let countrySeries = data.country_series || {};
+        if (hasCache && partial && bucketSec === cached.bucket_sec) {
+          series = mergeSeries(cached.series, series);
+          countrySeries = mergeCountrySeries(cached.country_series || {}, countrySeries);
+        }
+        const lastTs = series.length ? series[series.length - 1].ts : (cached ? cached.last_ts : null);
+        const nextPayload = {
+          range: currentRange,
+          bucket_sec: bucketSec,
+          series,
+          country_series: countrySeries,
+          last_ts: lastTs
+        };
+        seriesCache.set(cacheKey, nextPayload);
+        renderSeriesPayload(nextPayload);
+      } catch (err) {
+        // ignore
+      } finally {
+        if (chartLoadingTimer) {
+          clearTimeout(chartLoadingTimer);
+          chartLoadingTimer = null;
+        }
+        setChartLoading(false);
+        loadSeries.inFlight = false;
+      }
+    };
+
+    const pickPollMs = () => {
+      if (currentRange === "1h") return { summary: 5000, series: 10000, vps: 10000 };
+      if (currentRange === "5h") return { summary: 10000, series: 20000, vps: 20000 };
+      if (currentRange === "24h") return { summary: 30000, series: 60000, vps: 60000 };
+      if (currentRange === "7d") return { summary: 60000, series: 120000, vps: 120000 };
+      if (currentRange === "30d") return { summary: 120000, series: 300000, vps: 300000 };
+      return { summary: 120000, series: 300000, vps: 120000 };
+    };
+
+      const resetPolling = () => {
+        if (summaryTimer) clearInterval(summaryTimer);
+        if (seriesTimer) clearInterval(seriesTimer);
+        if (vpsTimer) clearInterval(vpsTimer);
+        if (vpsSparkTimer) clearInterval(vpsSparkTimer);
+        const poll = pickPollMs();
+        summaryTimer = setInterval(update, poll.summary);
+        seriesTimer = setInterval(loadSeries, poll.series);
+        vpsTimer = setInterval(refreshVpsList, poll.summary);
+        vpsSparkTimer = setInterval(fetchVpsSparks, 120000);
+      };
+
+    ensureWidgetLoading();
+    setView("overview");
+      update();
+      loadSeries();
+      refreshVpsList();
+      fetchVpsSparks();
+      resetPolling();
+  </script>
+</body>
+</html>
