@@ -18,8 +18,7 @@
     {
       "name": "vps-1",
       "host": "YOUR_VPS_1_IP",
-      "password": "YOUR_VPS_1_PASSWORD",
-      "hostkey": "YOUR_VPS_1_HOSTKEY"
+      "password": "YOUR_VPS_1_PASSWORD"
     }
   ]
 }
