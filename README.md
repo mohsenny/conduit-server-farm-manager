@@ -1,5 +1,9 @@
 # Conduit VPS Bootstrap
 
+![Image](https://github.com/user-attachments/assets/791ab4af-15ab-4350-85bb-feb0aeb1a3c3)
+
+![Image](https://github.com/user-attachments/assets/1737d9dc-5cbc-470f-afbf-0a65329f2dc5)
+
 Deploy Psiphon Conduit to one or more VPSs (via Docker) and run a local dashboard that reads metrics over SSH tunnels.
 
 ## Prerequisites (local machine)
@@ -128,6 +132,14 @@ macOS/Linux commands:
   Same as Windows `quick`.
 - `./scripts/conduit.sh dashboard`  
   Same as Windows `dashboard`.
+
+Target a specific VPS (macOS/Linux):
+- `./scripts/conduit.sh up --only vps-1`  
+  Runs `up` only for the named VPS.
+- `./scripts/conduit.sh up --only vps-1,vps-3`  
+  Runs `up` only for the listed VPS names.
+- `./scripts/conduit.sh status --only 217.216.33.68`  
+  You can also target by IP/host.
 
 ## Notes
 - `config\conduit.json` is **gitignored**. Share only `config\conduit.example.json`.

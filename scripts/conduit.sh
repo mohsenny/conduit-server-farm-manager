@@ -3,6 +3,32 @@
 set -euo pipefail
 
 COMMAND="${1:-up}"
+shift || true
+
+ONLY_TARGETS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --only|-Only)
+      shift || true
+      if [[ -n "${1:-}" ]]; then
+        IFS=',' read -r -a _parts <<< "$1"
+        for part in "${_parts[@]}"; do
+          part="$(echo "$part" | xargs)"
+          [[ -n "$part" ]] && ONLY_TARGETS+=("$part")
+        done
+      fi
+      ;;
+    --only=*)
+      value="${1#*=}"
+      IFS=',' read -r -a _parts <<< "$value"
+      for part in "${_parts[@]}"; do
+        part="$(echo "$part" | xargs)"
+        [[ -n "$part" ]] && ONLY_TARGETS+=("$part")
+      done
+      ;;
+  esac
+  shift || true
+done
 
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_ROOT/.." && pwd)"
@@ -58,6 +84,20 @@ get_vps_list() {
     end
     | .[]
   ' "$CONFIG_PATH"
+}
+
+should_include() {
+  local name="$1"
+  local host="$2"
+  if [[ "${#ONLY_TARGETS[@]}" -eq 0 ]]; then
+    return 0
+  fi
+  for t in "${ONLY_TARGETS[@]}"; do
+    if [[ "$t" == "$name" || "$t" == "$host" ]]; then
+      return 0
+    fi
+  done
+  return 1
 }
 
 assert_config() {
@@ -1270,6 +1310,9 @@ start_dashboard() {
     local name host user ssh_port ssh_key_path
     name="$(jq -r '.name // empty' <<< "$vps")"
     host="$(jq -r '.host // empty' <<< "$vps")"
+    if ! should_include "$name" "$host"; then
+      continue
+    fi
     user="$(jq -r '.user // empty' <<< "$vps")"
     ssh_port="$(jq -r '.ssh_port // 22' <<< "$vps")"
     ssh_key_path="$(jq -r '.ssh_key_path // empty' <<< "$vps")"
@@ -1394,6 +1437,9 @@ case "$COMMAND" in
     while IFS= read -r vps; do
       local_name="$(jq -r '.name // empty' <<< "$vps")"
       local_host="$(jq -r '.host // empty' <<< "$vps")"
+      if ! should_include "$local_name" "$local_host"; then
+        continue
+      fi
       local_user="$(jq -r '.user // empty' <<< "$vps")"
       local_port="$(jq -r '.ssh_port // 22' <<< "$vps")"
       local_key="$(jq -r '.ssh_key_path // empty' <<< "$vps")"
@@ -1413,6 +1459,9 @@ case "$COMMAND" in
     while IFS= read -r vps; do
       name="$(jq -r '.name // empty' <<< "$vps")"
       host="$(jq -r '.host // empty' <<< "$vps")"
+      if ! should_include "$name" "$host"; then
+        continue
+      fi
       user="$(jq -r '.user // empty' <<< "$vps")"
       port="$(jq -r '.ssh_port // 22' <<< "$vps")"
       ssh_key_path="$(jq -r '.ssh_key_path // empty' <<< "$vps")"
@@ -1458,6 +1507,9 @@ case "$COMMAND" in
     while IFS= read -r vps; do
       name="$(jq -r '.name // empty' <<< "$vps")"
       host="$(jq -r '.host // empty' <<< "$vps")"
+      if ! should_include "$name" "$host"; then
+        continue
+      fi
       user="$(jq -r '.user // empty' <<< "$vps")"
       port="$(jq -r '.ssh_port // 22' <<< "$vps")"
       ssh_key_path="$(jq -r '.ssh_key_path // empty' <<< "$vps")"
@@ -1473,6 +1525,9 @@ case "$COMMAND" in
     while IFS= read -r vps; do
       name="$(jq -r '.name // empty' <<< "$vps")"
       host="$(jq -r '.host // empty' <<< "$vps")"
+      if ! should_include "$name" "$host"; then
+        continue
+      fi
       user="$(jq -r '.user // empty' <<< "$vps")"
       port="$(jq -r '.ssh_port // 22' <<< "$vps")"
       ssh_key_path="$(jq -r '.ssh_key_path // empty' <<< "$vps")"
@@ -1488,6 +1543,9 @@ case "$COMMAND" in
     while IFS= read -r vps; do
       name="$(jq -r '.name // empty' <<< "$vps")"
       host="$(jq -r '.host // empty' <<< "$vps")"
+      if ! should_include "$name" "$host"; then
+        continue
+      fi
       user="$(jq -r '.user // empty' <<< "$vps")"
       port="$(jq -r '.ssh_port // 22' <<< "$vps")"
       ssh_key_path="$(jq -r '.ssh_key_path // empty' <<< "$vps")"
